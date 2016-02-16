@@ -1,14 +1,27 @@
 #include <SoftwareSerial.h>
- 
+#include "Server.h"
+//#include "Emeter.h"
+#include "EmonLib.h"  
+
 #define DEBUG true
  
 SoftwareSerial esp8266(2,3); // make RX Arduino line is pin 2, make TX Arduino line is pin 3.
                              // This means that you need to connect the TX line from the esp to the Arduino's pin 2
                              // and the RX line from the esp to the Arduino's pin 3
+
+EnergyMonitor emon1; 
+
 void setup()
 {
   Serial.begin(9600);
   esp8266.begin(115200); // your esp's baud rate might be different
+  
+  Server server(2,3);
+  //EMonitor emonitor(int _inPinV,int _inPinI, int _numberOfSamples, double _VCAL, double _ICAL, double _PHASECAL);
+
+  //ENERGY MONITOR EMONLIB
+   emon1.current(1, 111.1); 
+  
   
   pinMode(11,OUTPUT);
   digitalWrite(11,LOW);
@@ -22,20 +35,25 @@ void setup()
   pinMode(10,OUTPUT);
   digitalWrite(10,LOW);
    
-  sendCommand("AT+RST\r\n",2000,DEBUG); // reset module
-  sendCommand("AT+CWMODE=2\r\n",1000,DEBUG); // configure as access point
-  sendCommand("AT+CWSAP=\"POWERMONITOR\",\"1234567890\",5,3\r\n",3000,DEBUG);
-  //AT+ CWSAP= <ssid>,<pwd>
-  delay(10000);
-  sendCommand("AT+CIFSR\r\n",1000,DEBUG); // get ip address
-  sendCommand("AT+CIPMUX=1\r\n",1000,DEBUG); // configure for multiple connections
-  sendCommand("AT+CIPSERVER=1,80\r\n",1000,DEBUG); // turn on server on port 80
-  
+  server.initAP("E-MONITOR","987654321");
   Serial.println("Server Ready");
 }
  
 void loop()
 {
+
+  /*emonitor.mesure();
+  emonitor.realPower;
+  emonitor.apparentPower;
+  emonitor.powerFactor;
+  */
+
+  double Irms = emon1.calcIrms(1480);  // Calculate Irms only
+  
+  Serial.print(Irms*230.0);         // Apparent power
+  Serial.print(" ");
+  Serial.println(Irms);   
+  
   if(esp8266.available()) // check if the esp is sending a message 
   {
  
