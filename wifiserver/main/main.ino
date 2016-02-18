@@ -17,10 +17,10 @@ void setup()
   esp8266.begin(115200); // your esp's baud rate might be different
   
   Server server(2,3);
-  //EMonitor emonitor(int _inPinV,int _inPinI, int _numberOfSamples, double _VCAL, double _ICAL, double _PHASECAL);
+  //EMonitor emonitor(0,1,1480, 1,111.1,1);
 
   //ENERGY MONITOR EMONLIB
-   emon1.current(1, 111.1); 
+  emon1.current(1, 90.9); 
   
   
   pinMode(11,OUTPUT);
@@ -42,17 +42,27 @@ void setup()
 void loop()
 {
 
-  /*emonitor.mesure();
-  emonitor.realPower;
-  emonitor.apparentPower;
-  emonitor.powerFactor;
+  /*
+  emonitor.mesure();
+  Serial.print("RP");
+  Serial.print(emonitor.realPower);         // Apparent power
+  Serial.print("-AP");
+  Serial.print(emonitor.apparentPower);         // Apparent power
+  Serial.print("-PF");
+  Serial.print(emonitor.powerFactor);         // Apparent power
+  Serial.println("");
   */
 
-  double Irms = emon1.calcIrms(1480);  // Calculate Irms only
+ /* double Irms = emon1.calcIrms(1480);  // Calculate Irms only
   
   Serial.print(Irms*230.0);         // Apparent power
   Serial.print(" ");
   Serial.println(Irms);   
+  */
+  int analogValue = analogRead(1);
+  Serial.print(analogValue);         // Apparent power
+  Serial.println(" ");
+  
   
   if(esp8266.available()) // check if the esp is sending a message 
   {

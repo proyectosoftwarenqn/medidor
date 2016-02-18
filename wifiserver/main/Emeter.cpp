@@ -38,7 +38,9 @@ for (int n=0; n<numberOfSamples; n++)
   
    //Root-mean-square method voltage
    //1) square voltage values
+   
    sqV= calibratedV * calibratedV;
+   
    //2) sum
    sumV += sqV;
    
