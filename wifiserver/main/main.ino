@@ -10,18 +10,22 @@ SoftwareSerial esp8266(2,3); // make RX Arduino line is pin 2, make TX Arduino l
                              // and the RX line from the esp to the Arduino's pin 3
 
 EnergyMonitor emon1; 
-
+double Irms;
+int RawValue;
+double Voltage;
+double Amps;
 void setup()
 {
   Serial.begin(9600);
   esp8266.begin(115200); // your esp's baud rate might be different
   
-  Server server(2,3);
+  //Server server(2,3);
   //EMonitor emonitor(0,1,1480, 1,111.1,1);
 
-  //ENERGY MONITOR EMONLIB
-  emon1.current(1, 90.9); 
-  
+  //ENERGY MONITOR EMONLIB -Cambio aca ahora llamamos a la funcion currentMulti
+  //emon1.current(0, 55.0); 
+
+  emon1.currentMulti(0,1,2,55.0);//donde las primeras 3 variables son las entradas analogicas
   
   pinMode(11,OUTPUT);
   digitalWrite(11,LOW);
@@ -35,7 +39,15 @@ void setup()
   pinMode(10,OUTPUT);
   digitalWrite(10,LOW);
    
-  server.initAP("E-MONITOR","987654321");
+  //server.initAP("EMONITOR","0987654321");
+
+    sendCommand("AT+RST\r\n",2000,false); // reset module
+  sendCommand("AT+CWMODE=2\r\n",1000,false); // configure as access point
+  sendCommand("AT+CWSAP=\"EMONITOR\",\"0987654321\",5,3\r\n",3000,false);
+  sendCommand("AT+CIFSR\r\n",1000,false); // get ip address
+  sendCommand("AT+CIPMUX=1\r\n",1000,false); // configure for multiple connections
+  sendCommand("AT+CIPSERVER=1,80\r\n",1000,false); // turn on server on port 80     
+  
   Serial.println("Server Ready");
 }
  
@@ -59,10 +71,21 @@ void loop()
   Serial.print(" ");
   Serial.println(Irms);   
   */
-  int analogValue = analogRead(1);
-  Serial.print(analogValue);         // Apparent power
-  Serial.println(" ");
-  
+ int dt = millis();
+ //cambiamos aca tambien, ahora llamos a la function emon1.calcIrmsMulti la cual setea las variables de clase IrmsArray
+  Irms = emon1.calcIrmsMulti(350);
+  dt= millis()-dt;
+  Serial.print(dt);
+  Serial.print("ms Amp");
+  Serial.print(" pahse1=");
+  Serial.print(emon1.IrmsArray[0]);   
+  Serial.print(" pahse2=");
+  Serial.print(emon1.IrmsArray[1]);
+  Serial.print(" pahse3=");
+  Serial.print(emon1.IrmsArray[2]);
+  Serial.println("");
+    
+ 
   
   if(esp8266.available()) // check if the esp is sending a message 
   {
@@ -73,10 +96,17 @@ void loop()
      delay(1000); // wait for the serial buffer to fill up (read all the serial data)
      // get the connection id so that we can then disconnect
      int connectionId = esp8266.read()-48; // subtract 48 because the read() function returns 
+     
                                            // the ASCII decimal value and 0 (the first decimal number) starts at 48
-          
-     esp8266.find("led="); // advance cursor to "pin="
-          
+     String content = "";
+     if(esp8266.find("/status"))
+     {
+      content+= Irms;
+     
+     }
+     
+     if(esp8266.find("led=")) // advance cursor to "pin="
+     {     
      int ledStatus = (esp8266.read()-48); // get first number i.e. if the pin 13 then the 1st number is 1
      
      if(ledStatus==1)
@@ -89,7 +119,6 @@ void loop()
      }
         
      // build string that is send back to device that is requesting pin toggle
-     String content;
      content = "Led ";
      content += " is ";
      
@@ -102,6 +131,7 @@ void loop()
        content += "OFF";
      }
      
+     }
      sendHTTPResponse(connectionId,content);
      
      // make close command

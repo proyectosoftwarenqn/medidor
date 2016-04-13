@@ -38,12 +38,14 @@ class EnergyMonitor
 
     void voltage(unsigned int _inPinV, double _VCAL, double _PHASECAL);
     void current(unsigned int _inPinI, double _ICAL);
-
+    void currentMulti(unsigned int _inPinI1,unsigned int _inPinI2,unsigned int _inPinI3, double _ICAL);
+    
     void voltageTX(double _VCAL, double _PHASECAL);
     void currentTX(unsigned int _channel, double _ICAL);
 
     void calcVI(unsigned int crossings, unsigned int timeout);
     double calcIrms(unsigned int NUMBER_OF_SAMPLES);
+    double calcIrmsMulti(unsigned int NUMBER_OF_SAMPLES);
     void serialprint();
 
     long readVcc();
@@ -53,12 +55,16 @@ class EnergyMonitor
        powerFactor,
        Vrms,
        Irms;
+    double IrmsArray[3];
+    
 
   private:
 
     //Set Voltage and current input pins
     unsigned int inPinV;
     unsigned int inPinI;
+    unsigned int inPinIArray[3];
+    
     //Calibration coefficients
     //These need to be set in order to obtain accurate results
     double VCAL;
@@ -84,6 +90,16 @@ class EnergyMonitor
 
 	boolean lastVCross, checkVCross;                  //Used to measure number of times threshold is crossed.
 
+  //----------------
+  // VAriables del procedimiento para medir las tres fases
+  //---------------
+  int sampleIArray[3];
+  double offsetIArray[3];
+  double filteredIArray[3];
+  double sqIArray[3];
+  double sumIArray[3];  
+
+  
 
 };
 

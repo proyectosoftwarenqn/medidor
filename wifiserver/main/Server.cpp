@@ -41,7 +41,7 @@ String Server::sendATCommand(String command, const int timeout)
   sendATCommand("AT+CWSAP=\""+ssid+"\",\""+password+"\",5,3\r\n",3000);
   sendATCommand("AT+CIFSR\r\n",1000); // get ip address
   sendATCommand("AT+CIPMUX=1\r\n",1000); // configure for multiple connections
-  sendATCommand("AT+CIPSERVER=1,80\r\n",1000); // turn on server on port 80     
+  sendATCommand("AT+CIPSERVER=1,8080\r\n",1000); // turn on server on port 80     
  }
  
  

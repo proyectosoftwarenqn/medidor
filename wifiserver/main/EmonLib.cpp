@@ -31,6 +31,15 @@ void EnergyMonitor::current(unsigned int _inPinI, double _ICAL)
    offsetI = ADC_COUNTS>>1; //512
 }
 
+void EnergyMonitor::currentMulti(unsigned int _inPinI1,unsigned int _inPinI2,unsigned int _inPinI3, double _ICAL)
+{
+   inPinIArray[0] = _inPinI1;
+   inPinIArray[1] = _inPinI2;
+   inPinIArray[2] = _inPinI3;
+   ICAL = _ICAL;
+   offsetI = ADC_COUNTS>>1; //512
+}
+
 //--------------------------------------------------------------------------------------
 // Sets the pins to be used for voltage and current sensors based on emontx pin map
 //--------------------------------------------------------------------------------------
@@ -168,6 +177,55 @@ void EnergyMonitor::calcVI(unsigned int crossings, unsigned int timeout)
 }
 
 //--------------------------------------------------------------------------------------
+//AGREGE ESTA FUNCION PARA LAS 3 fases
+double EnergyMonitor::calcIrmsMulti(unsigned int Number_of_Samples)
+{
+  /*
+   #if defined emonTxV3
+  int SupplyVoltage=3300;
+   #else 
+  int SupplyVoltage = readVcc();
+   #endif
+*/
+  int SupplyVoltage=4700;
+
+  
+   for (unsigned int n = 0; n < Number_of_Samples; n++)
+  {
+    //lazo para sensar las 3 fases hayq ue mejorar para detectar si una fase no esta activa, o llamar solamente al metodo anterior si es monofasico
+    for(unsigned int i = 0; i<3;i++)
+    {
+    sampleIArray[i] = analogRead(inPinIArray[i]);
+
+    // Digital low pass filter extracts the 2.5 V or 1.65 V dc offset, 
+    // then subtract this - signal is now centered on 0 counts.
+    offsetIArray[i] = (offsetIArray[i] + (sampleIArray[i]-offsetIArray[i])/1024);
+    filteredIArray[i] = sampleIArray[i] - offsetIArray[i];
+
+    // Root-mean-square method current
+    // 1) square current values
+    sqIArray[i] = filteredIArray[i] * filteredIArray[i];
+    // 2) sum 
+    sumIArray[i] += sqIArray[i];  
+    }
+    
+  }
+
+  double I_RATIO = ICAL *((SupplyVoltage/1000.0) / (ADC_COUNTS));
+  IrmsArray[0] = I_RATIO * sqrt(sumIArray[0] / Number_of_Samples); 
+  IrmsArray[1] = I_RATIO * sqrt(sumIArray[0] / Number_of_Samples);
+  IrmsArray[2] = I_RATIO * sqrt(sumIArray[0] / Number_of_Samples);
+  
+  //Reset accumulators
+  sumIArray[0] = 0;
+  sumIArray[1] = 0;
+  sumIArray[2] = 0;
+//--------------------------------------------------------------------------------------       
+ 
+  return Irms;
+}
+
+//--------------------------------------------------------------------------------------
 double EnergyMonitor::calcIrms(unsigned int Number_of_Samples)
 {
   /*
@@ -177,29 +235,17 @@ double EnergyMonitor::calcIrms(unsigned int Number_of_Samples)
 	int SupplyVoltage = readVcc();
    #endif
 */
-  int SupplyVoltage=3300;
+  int SupplyVoltage=4700;
 
   
-  for (unsigned int n = 0; n < Number_of_Samples; n++)
+   for (unsigned int n = 0; n < Number_of_Samples; n++)
   {
+    sampleI = analogRead(inPinI);
 
-   //Used for offset removal
-   lastSampleI=sampleI;
-   
-   //Read in voltage and current samples.   
-   sampleI = analogRead(inPinI);
-   
-   //Used for offset removal
-   lastFilteredI = filteredI;
-   
-   
     // Digital low pass filter extracts the 2.5 V or 1.65 V dc offset, 
-	//  then subtract this - signal is now centered on 0 counts.
-    //offsetI = (offsetI + (sampleI-offsetI)/1024); //512+()
-
-     filteredI = 0.996*(lastFilteredI+sampleI-lastSampleI);
-    
-	  //filteredI = sampleI - offsetI;
+ //  then subtract this - signal is now centered on 0 counts.
+    offsetI = (offsetI + (sampleI-offsetI)/1024);
+  filteredI = sampleI - offsetI;
 
     // Root-mean-square method current
     // 1) square current values
@@ -208,8 +254,7 @@ double EnergyMonitor::calcIrms(unsigned int Number_of_Samples)
     sumI += sqI;
   }
 
-  //double I_RATIO = ICAL *((SupplyVoltage/1000.0) / (ADC_COUNTS));
-  double I_RATIO = ICAL *(SupplyVoltage/1000.0);
+  double I_RATIO = ICAL *((SupplyVoltage/1000.0) / (ADC_COUNTS));
   Irms = I_RATIO * sqrt(sumI / Number_of_Samples); 
 
   //Reset accumulators
