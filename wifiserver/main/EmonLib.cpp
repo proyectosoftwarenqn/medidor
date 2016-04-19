@@ -213,8 +213,8 @@ double EnergyMonitor::calcIrmsMulti(unsigned int Number_of_Samples)
 
   double I_RATIO = ICAL *((SupplyVoltage/1000.0) / (ADC_COUNTS));
   IrmsArray[0] = I_RATIO * sqrt(sumIArray[0] / Number_of_Samples); 
-  IrmsArray[1] = I_RATIO * sqrt(sumIArray[0] / Number_of_Samples);
-  IrmsArray[2] = I_RATIO * sqrt(sumIArray[0] / Number_of_Samples);
+  IrmsArray[1] = I_RATIO * sqrt(sumIArray[1] / Number_of_Samples);
+  IrmsArray[2] = I_RATIO * sqrt(sumIArray[2] / Number_of_Samples);
   
   //Reset accumulators
   sumIArray[0] = 0;
