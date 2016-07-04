@@ -5,7 +5,7 @@
 
 #define DEBUG true
  
-SoftwareSerial esp8266(9,10); // make RX Arduino line is pin 2, make TX Arduino line is pin 3.
+SoftwareSerial esp8266(2,3); // make RX Arduino line is pin 2, make TX Arduino line is pin 3.
                              // This means that you need to connect the TX line from the esp to the Arduino's pin 2
                              // and the RX line from the esp to the Arduino's pin 3
 
@@ -16,7 +16,7 @@ double Voltage;
 double Amps;
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
   esp8266.begin(115200); // your esp's baud rate might be different
   
   //Server server(2,3);
@@ -43,7 +43,7 @@ void setup()
 
     sendCommand("AT+RST\r\n",2000,false); // reset module
   sendCommand("AT+CWMODE=2\r\n",1000,false); // configure as access point
-  sendCommand("AT+CWSAP=\"EMETER_001aaa\",\"0000453298\",5,3\r\n",3000,false);
+  sendCommand("AT+CWSAP=\"EMONITOR\",\"0987654321\",5,3\r\n",3000,false);
   sendCommand("AT+CIFSR\r\n",1000,false); // get ip address
   sendCommand("AT+CIPMUX=1\r\n",1000,false); // configure for multiple connections
   sendCommand("AT+CIPSERVER=1,80\r\n",1000,false); // turn on server on port 80     
@@ -101,14 +101,37 @@ void loop()
      String content = "";
      if(esp8266.find("/status"))
      {
-      content+= "status";
+      content+= Irms;
+     
      }
-
-     if(esp8266.find("/read"))
+     
+     if(esp8266.find("led=")) // advance cursor to "pin="
+     {     
+     int ledStatus = (esp8266.read()-48); // get first number i.e. if the pin 13 then the 1st number is 1
+     
+     if(ledStatus==1)
      {
-      content+= emon1.IrmsArray[0];
+      digitalWrite(13,HIGH);
      }
-    
+     if(ledStatus==2)
+     {
+      digitalWrite(13,LOW);
+     }
+        
+     // build string that is send back to device that is requesting pin toggle
+     content = "Led ";
+     content += " is ";
+     
+     if(digitalRead(13)==HIGH)
+     {
+       content += "ON";
+     }
+     else
+     {
+       content += "OFF";
+     }
+     
+     }
      sendHTTPResponse(connectionId,content);
      
      // make close command
@@ -135,7 +158,7 @@ String sendData(String command, const int timeout, boolean debug)
     char data[dataSize];
     command.toCharArray(data,dataSize);
            
-    Serial.write(data,dataSize); // send the read character to the esp8266
+    esp8266.write(data,dataSize); // send the read character to the esp8266
     if(debug)
     {
       Serial.println("\r\n====== HTTP Response From Arduino ======");
@@ -147,11 +170,11 @@ String sendData(String command, const int timeout, boolean debug)
     
     while( (time+timeout) > millis())
     {
-      while(Serial.available())
+      while(esp8266.available())
       {
         
         // The esp has data so display its output to the serial window 
-        char c = Serial.read(); // read the next character.
+        char c = esp8266.read(); // read the next character.
         response+=c;
       }  
     }
