@@ -15,10 +15,8 @@ double Irms;
 double w;
 double kw;
 double kwh; //Counter->kwh
-int RawValue;
-double Voltage;
-double Amps;
 String readResponse;
+
 void setup()
 {
   Serial.begin(9600);
