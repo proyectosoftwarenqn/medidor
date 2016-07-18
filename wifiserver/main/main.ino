@@ -1,57 +1,56 @@
 #include <SoftwareSerial.h>
 #include "SimpleESP8266.h"
-//#include "Emeter.h"
 #include "EmonLib.h"  
 #include <ESP8266wifi.h>
 #define DEBUG true
+const char EMETER_CORE_VERSION[] = "v0.0.1";
  
 SoftwareSerial esp8266(2,3); // make RX Arduino line is pin 2, make TX Arduino line is pin 3.
                              // This means that you need to connect the TX line from the esp to the Arduino's pin 2
                            // and the RX line from the esp to the Arduino's pin 3
-SimpleESP8266 emeter(1,2);
+SimpleESP8266 emeterEsp(1,2);
 
-EnergyMonitor emon1; 
+EnergyMonitor emeterMonitor; 
 double Irms;
-double IrmsSum;
+double w;
+double kw;
+double kwh; //Counter->kwh
 int RawValue;
 double Voltage;
 double Amps;
+String readResponse;
 void setup()
 {
   Serial.begin(9600);
   esp8266.begin(9600); // your esp's baud rate might be different
   
- 
-  emon1.current(0, 55.0); 
-  emeter.setSerials(&esp8266, &Serial);
-  emeter.restart();
+
+  
+  emeterMonitor.current(0, 55.0); 
+  
+  //eMeter wifiConf 
+  emeterEsp.setSerials(&esp8266, &Serial);
+  Serial.print("Starting eMeter core ");
+  Serial.print(EMETER_CORE_VERSION);
+  Serial.println();
+  Serial.print("Authors: Gonzalo, Valdez & Matias, Barril.");
+  Serial.println("==========================================");
+  emeterEsp.startStationMode();
+  emeterEsp.setSecurity("EMETER_001aaa", "0000453298");
+  emeterEsp.startServer("80", "1");
+  //-----------------------------------------------------------
 }
  
 void loop()
 {
 
-  /*
-  emonitor.mesure();
-  Serial.print("RP");
-  Serial.print(emonitor.realPower);         // Apparent power
-  Serial.print("-AP");
-  Serial.print(emonitor.apparentPower);         // Apparent power
-  Serial.print("-PF");
-  Serial.print(emonitor.powerFactor);         // Apparent power
-  Serial.println("");
-  */
 
- /* double Irms = emon1.calcIrms(1480);  // Calculate Irms only
+   float dt = millis();
+ 
+  //cambiamos aca tambien, ahora llamos a la function emon1.calcIrmsMulti la cual setea las variables de clase IrmsArray
+  Irms = emeterMonitor.calcIrms(350);//esta funcion realiza el calculo de irms tomando 350 muestras
   
-  Serial.print(Irms*230.0);         // Apparent power
-  Serial.print(" ");
-  Serial.println(Irms);   
-  */
- float dt = millis();
- //cambiamos aca tambien, ahora llamos a la function emon1.calcIrmsMulti la cual setea las variables de clase IrmsArray
-  Irms = emon1.calcIrms(350);//esta funcion realiza el calculo de irms tomando 350 muestras
-  //Irms *= 220.0; 
-   dt= millis()-dt;
+  dt= millis()-dt;
   Serial.print("time=");
   Serial.print(dt);
   Serial.print("ms Irms-pahse1=");
@@ -60,7 +59,32 @@ void loop()
   Serial.println(analogRead(0));
 
   
-  IrmsSum += Irms;
+  w = 0.95 * 220.0 * Irms;
+  
+  kw = (w/1000.0);
+
+  //dt from ms -> min
+
+  dt = dt/60000.0;
+
+  //dt from min -> h
+
+  dt = dt/60;
+  
+  //kwh counter since start
+  //TODO: save counter in sdcard.
+  kwh += kw/dt;
+  
+
+  if(emeterEsp.hasRequest()){
+    if(emeterEsp.requestedAction==1){ //read action
+    readResponse = "";
+    readResponse += w;
+    readResponse += ";";
+    readResponse += kwh;
+    emeterEsp.response(readResponse);
+    }
+  }
     
   
   
